@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>纪脉 · 链接纪要，洞察进度</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="hero">
+    <nav class="nav">
+      <span class="nav-mark">纪脉</span>
+      <a href="#workspace">开始分析</a>
+    </nav>
+    <div class="hero-plane">
+      <p class="brand">纪脉</p>
+      <h1>把会议链接，读成项目进度。</h1>
+      <p class="lede">粘贴纪要链接或文本，自动提炼每次会议总结，并汇成可分享的 HTML 进度报告。</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#workspace">开始分析</a>
+        <button type="button" class="btn ghost" id="loadDemo">使用示例纪要</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="workspace" class="workspace">
+    <section class="compose">
+      <h2>输入纪要链接</h2>
+      <p class="section-lede">支持公开网页 / Markdown 链接；也可粘贴原文。本地示例路径形如 <code>/samples/meetings/...</code>。</p>
+
+      <label class="field">
+        <span>项目名称（可选）</span>
+        <input id="projectName" type="text" placeholder="例如：智能客服平台" />
+      </label>
+
+      <label class="field">
+        <span>链接列表（每行一个）</span>
+        <textarea id="links" rows="7" placeholder="/samples/meetings/2026-01-08-kickoff.md&#10;https://example.com/meeting-notes"></textarea>
+      </label>
+
+      <label class="field">
+        <span>或粘贴会议纪要原文（可选）</span>
+        <textarea id="paste" rows="6" placeholder="把单次会议纪要粘贴在这里…"></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn primary" id="analyzeBtn">识别进度并生成报告</button>
+        <button type="button" class="btn ghost" id="clearBtn">清空</button>
+      </div>
+      <p class="status" id="status" role="status"></p>
+    </section>
+
+    <section class="result" id="result" hidden>
+      <div class="result-bar">
+        <h2>报告预览</h2>
+        <div class="result-actions">
+          <button type="button" class="btn primary" id="openReport">新窗口打开</button>
+          <button type="button" class="btn ghost" id="downloadReport">下载 HTML</button>
+        </div>
+      </div>
+      <div class="insight" id="insight"></div>
+      <iframe id="preview" title="进度报告预览"></iframe>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>纪脉 · 会议纪要进度识别与 HTML 报告生成</p>
+  </footer>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
