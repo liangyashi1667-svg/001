@@ -1,325 +1,176 @@
 import { useMemo, useState } from 'react'
-import {
-  initialWorkItems,
-  members,
-  spaces,
-} from './data/mockData'
-import type { GroupBy, Status, ViewMode, WorkItem } from './types'
-import { uid } from './utils/date'
-import { TableView } from './components/TableView'
-import { KanbanView } from './components/KanbanView'
-import { GanttView } from './components/GanttView'
-import { CalendarView, shiftMonth } from './components/CalendarView'
-import { WorkItemDrawer } from './components/WorkItemDrawer'
-import { CreateModal, type CreatePayload } from './components/CreateModal'
+import type { Project, RecognizedDraft } from './types'
+import { nextColor } from './lib/recognize'
+import { uid } from './lib/date'
+import { MultiProjectGantt, overallRangeLabel } from './components/MultiProjectGantt'
+import { RecognizeModal } from './components/RecognizeModal'
 
-const viewOptions: { id: ViewMode; label: string }[] = [
-  { id: 'table', label: '表格' },
-  { id: 'kanban', label: '看板' },
-  { id: 'gantt', label: '甘特' },
-  { id: 'calendar', label: '日历' },
+const seed: Project[] = [
+  {
+    id: 'p_demo_1',
+    name: '产品体验升级',
+    startDate: '2026-08-11',
+    endDate: '2026-08-29',
+    color: '#0F766E',
+    sourceLabel: '示例项目',
+    nodes: [
+      { id: 'n1', name: '方案评审', date: '2026-08-18' },
+      { id: 'n2', name: '联调提测', date: '2026-08-24' },
+      { id: 'n3', name: '周期验收', date: '2026-08-29' },
+    ],
+  },
+  {
+    id: 'p_demo_2',
+    name: '数据中台 M2',
+    startDate: '2026-08-01',
+    endDate: '2026-09-15',
+    color: '#0369A1',
+    sourceLabel: '示例项目',
+    nodes: [
+      { id: 'n4', name: '口径对齐', date: '2026-08-10' },
+      { id: 'n5', name: '看板上线', date: '2026-09-01' },
+      { id: 'n6', name: '里程碑验收', date: '2026-09-15' },
+    ],
+  },
 ]
 
-function cycleProgress(spaceId: string, items: WorkItem[]): number {
-  const list = items.filter((i) => i.projectId === spaceId)
-  if (list.length === 0) return 0
-  return Math.round(list.reduce((sum, i) => sum + i.progress, 0) / list.length)
-}
-
 export default function App() {
-  const [projectId, setProjectId] = useState(spaces[0].id)
-  const [items, setItems] = useState<WorkItem[]>(initialWorkItems)
-  const [view, setView] = useState<ViewMode>('table')
-  const [groupBy, setGroupBy] = useState<GroupBy>('none')
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showCreate, setShowCreate] = useState(false)
-  const [monthAnchor, setMonthAnchor] = useState(spaces[0].cycleStart)
+  const [projects, setProjects] = useState<Project[]>(seed)
+  const [selectedId, setSelectedId] = useState<string | null>(seed[0]?.id ?? null)
+  const [openRecognize, setOpenRecognize] = useState(false)
 
-  const space = spaces.find((s) => s.id === projectId) ?? spaces[0]
-  const memberMap = useMemo(
-    () => Object.fromEntries(members.map((m) => [m.id, m])),
-    [],
+  const selected = projects.find((p) => p.id === selectedId) ?? null
+  const rangeLabel = useMemo(() => overallRangeLabel(projects), [projects])
+  const nodeCount = useMemo(
+    () => projects.reduce((sum, p) => sum + p.nodes.length, 0),
+    [projects],
   )
 
-  const projectItems = useMemo(
-    () => items.filter((i) => i.projectId === projectId),
-    [items, projectId],
-  )
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return projectItems
-    return projectItems.filter(
-      (i) =>
-        i.title.toLowerCase().includes(q) ||
-        i.key.toLowerCase().includes(q) ||
-        i.tags.some((t) => t.toLowerCase().includes(q)),
-    )
-  }, [projectItems, query])
-
-  const selected = items.find((i) => i.id === selectedId) ?? null
-
-  const counts = useMemo(() => {
-    const total = projectItems.length
-    const done = projectItems.filter((i) => i.status === 'done').length
-    const blocked = projectItems.filter((i) => i.status === 'blocked').length
-    const active = projectItems.filter((i) =>
-      ['in_progress', 'review', 'testing'].includes(i.status),
-    ).length
-    return { total, done, blocked, active }
-  }, [projectItems])
-
-  const progress = cycleProgress(projectId, items)
-
-  const updateItem = (id: string, patch: Partial<WorkItem>) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+  const importDraft = (draft: RecognizedDraft, sourceLabel: string) => {
+    const project: Project = {
+      id: uid('p'),
+      name: draft.name,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      color: nextColor(projects.length),
+      sourceLabel,
+      nodes: draft.nodes.map((n) => ({
+        id: uid('n'),
+        name: n.name,
+        date: n.date,
+        note: n.note,
+      })),
+    }
+    setProjects((prev) => [...prev, project])
+    setSelectedId(project.id)
+    setOpenRecognize(false)
   }
 
-  const createItem = (payload: CreatePayload) => {
-    const prefix = space.name.slice(0, 2).toUpperCase() || 'CB'
-    const next: WorkItem = {
-      id: uid('w'),
-      key: `${prefix}-${100 + items.length}`,
-      title: payload.title,
-      type: payload.type,
-      status: 'backlog',
-      priority: payload.priority,
-      assigneeId: payload.assigneeId,
-      projectId,
-      startDate: payload.startDate,
-      endDate: payload.endDate,
-      progress: 0,
-      tags: ['新建'],
-      description: payload.description,
-      createdAt: new Date().toISOString().slice(0, 10),
-    }
-    setItems((prev) => [next, ...prev])
-    setShowCreate(false)
-    setSelectedId(next.id)
+  const removeSelected = () => {
+    if (!selected) return
+    setProjects((prev) => prev.filter((p) => p.id !== selected.id))
+    setSelectedId(null)
   }
-
-  const spaceCounts = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const s of spaces) {
-      map[s.id] = items.filter((i) => i.projectId === s.id).length
-    }
-    return map
-  }, [items])
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className="app">
+      <header className="top">
         <div className="brand">
-          <div className="brand-mark">C</div>
-          <div className="brand-text">
-            <span className="brand-name">CycleBoard</span>
-            <span className="brand-sub">项目周期多维管理</span>
+          <div className="mark">G</div>
+          <div>
+            <h1>节点甘特</h1>
+            <p>多项目时间节点 · 材料识别导入</p>
           </div>
         </div>
+        <div className="top-actions">
+          <button type="button" className="btn ghost" onClick={() => setProjects(seed)}>
+            恢复示例
+          </button>
+          <button type="button" className="btn primary" onClick={() => setOpenRecognize(true)}>
+            识别材料导入
+          </button>
+        </div>
+      </header>
 
-        <div>
-          <div className="side-section-title">项目空间</div>
-          <div className="space-list">
-            {spaces.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={`space-item${projectId === s.id ? ' active' : ''}`}
-                onClick={() => {
-                  setProjectId(s.id)
-                  setSelectedId(null)
-                  setMonthAnchor(s.cycleStart)
-                }}
-              >
-                <span className="space-dot" style={{ background: s.color }} />
-                <span className="space-meta">
-                  <div className="space-name">{s.name}</div>
-                  <div className="space-cycle">{s.cycleLabel}</div>
-                </span>
-                <span className="space-count">{spaceCounts[s.id]}</span>
-              </button>
-            ))}
+      <section className="stats">
+        <div className="stat">
+          <span>项目数</span>
+          <strong>{projects.length}</strong>
+        </div>
+        <div className="stat">
+          <span>节点数</span>
+          <strong>{nodeCount}</strong>
+        </div>
+        <div className="stat wide">
+          <span>整体时间范围</span>
+          <strong>{rangeLabel}</strong>
+        </div>
+      </section>
+
+      <section className="workspace">
+        <div className="gantt-wrap">
+          <div className="section-title">
+            <h2>多项目甘特图</h2>
+            <span>色条为项目周期，圆点为关键时间节点</span>
           </div>
+          <MultiProjectGantt
+            projects={projects}
+            selectedId={selectedId}
+            onSelectProject={setSelectedId}
+          />
         </div>
 
-        <div className="cycle-card">
-          <h3>{space.cycleLabel}</h3>
-          <p>
-            {space.cycleStart} → {space.cycleEnd}
-            <br />
-            {space.description}
-          </p>
-          <div className="cycle-progress">
-            <span style={{ width: `${progress}%` }} />
+        <aside className="side">
+          <div className="section-title">
+            <h2>项目详情</h2>
           </div>
-          <div className="cycle-stats">
-            <span>周期进度 {progress}%</span>
-            <span>
-              {counts.done}/{counts.total} 完成
-            </span>
-          </div>
-        </div>
-      </aside>
-
-      <main className="main">
-        <header className="topbar">
-          <div className="topbar-left">
-            <h1 className="topbar-title">{space.name}</h1>
-            <span className="topbar-desc">{space.description}</span>
-          </div>
-          <div className="topbar-actions">
-            <button type="button" className="btn btn-ghost" onClick={() => setView('gantt')}>
-              查看周期
-            </button>
-            <button type="button" className="btn btn-primary" onClick={() => setShowCreate(true)}>
-              + 新建工作项
-            </button>
-          </div>
-        </header>
-
-        <div className="toolbar">
-          <div className="view-switch" role="tablist" aria-label="视图切换">
-            {viewOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                role="tab"
-                aria-selected={view === opt.id}
-                className={view === opt.id ? 'active' : undefined}
-                onClick={() => setView(opt.id)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="toolbar-right">
-            <label className="search-box">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="11" cy="11" r="7" stroke="#7A8D84" strokeWidth="2" />
-                <path d="M20 20l-3.5-3.5" stroke="#7A8D84" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <input
-                placeholder="搜索标题、编号、标签"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-
-            {view === 'table' && (
-              <select
-                className="select-chip"
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-                aria-label="分组"
-              >
-                <option value="none">不分组</option>
-                <option value="status">按状态</option>
-                <option value="assignee">按负责人</option>
-                <option value="priority">按优先级</option>
-                <option value="type">按类型</option>
-              </select>
-            )}
-
-            {view === 'calendar' && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setMonthAnchor((m: string) => shiftMonth(m, -1))}
-                >
-                  上月
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => setMonthAnchor((m: string) => shiftMonth(m, 1))}
-                >
-                  下月
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="content">
-          <div className="summary-strip">
-            <div className="summary-item">
-              <div className="label">工作项</div>
-              <div className="value">{counts.total}</div>
-              <div className="hint">本周期全部条目</div>
-            </div>
-            <div className="summary-item">
-              <div className="label">推进中</div>
-              <div className="value">{counts.active}</div>
-              <div className="hint">进行 / 评审 / 测试</div>
-            </div>
-            <div className="summary-item">
-              <div className="label">已完成</div>
-              <div className="value">{counts.done}</div>
-              <div className="hint">完成率 {counts.total ? Math.round((counts.done / counts.total) * 100) : 0}%</div>
-            </div>
-            <div className="summary-item">
-              <div className="label">阻塞</div>
-              <div className="value" style={{ color: counts.blocked ? 'var(--danger)' : undefined }}>
-                {counts.blocked}
+          {!selected ? (
+            <div className="side-empty">选择甘特图中的项目查看节点</div>
+          ) : (
+            <div className="side-card">
+              <div className="side-head">
+                <span className="dot" style={{ background: selected.color }} />
+                <div>
+                  <h3>{selected.name}</h3>
+                  <small>{selected.sourceLabel || '手动导入'}</small>
+                </div>
               </div>
-              <div className="hint">需优先解阻</div>
+              <div className="kv">
+                <div>
+                  <span>周期</span>
+                  <b>
+                    {selected.startDate} → {selected.endDate}
+                  </b>
+                </div>
+                <div>
+                  <span>节点</span>
+                  <b>{selected.nodes.length} 个</b>
+                </div>
+              </div>
+              <ul className="node-list">
+                {selected.nodes
+                  .slice()
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map((n) => (
+                    <li key={n.id}>
+                      <span className="node-date">{n.date}</span>
+                      <span className="node-name">{n.name}</span>
+                    </li>
+                  ))}
+              </ul>
+              <button type="button" className="btn ghost danger" onClick={removeSelected}>
+                移除该项目
+              </button>
             </div>
-          </div>
+          )}
+        </aside>
+      </section>
 
-          {view === 'table' && (
-            <TableView
-              items={filtered}
-              groupBy={groupBy}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              memberMap={memberMap}
-            />
-          )}
-          {view === 'kanban' && (
-            <KanbanView
-              items={filtered}
-              memberMap={memberMap}
-              onSelect={setSelectedId}
-              onStatusChange={(id, status: Status) => updateItem(id, { status })}
-            />
-          )}
-          {view === 'gantt' && (
-            <GanttView
-              items={filtered}
-              cycleStart={space.cycleStart}
-              cycleEnd={space.cycleEnd}
-              onSelect={setSelectedId}
-            />
-          )}
-          {view === 'calendar' && (
-            <CalendarView items={filtered} monthAnchor={monthAnchor} onSelect={setSelectedId} />
-          )}
-        </div>
-      </main>
-
-      {selected && (
-        <WorkItemDrawer
-          item={selected}
-          members={members}
-          onClose={() => setSelectedId(null)}
-          onChange={(patch) => updateItem(selected.id, patch)}
-          onDelete={() => {
-            setItems((prev) => prev.filter((i) => i.id !== selected.id))
-            setSelectedId(null)
-          }}
-        />
-      )}
-
-      {showCreate && (
-        <CreateModal
-          members={members}
-          onClose={() => setShowCreate(false)}
-          onCreate={createItem}
-        />
-      )}
+      <RecognizeModal
+        open={openRecognize}
+        onClose={() => setOpenRecognize(false)}
+        onConfirm={importDraft}
+      />
     </div>
   )
 }
