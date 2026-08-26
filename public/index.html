@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>纪脉 · 链接纪要，洞察进度</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+SC:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="hero">
+    <nav class="nav">
+      <span class="nav-mark">纪脉</span>
+      <a href="#workspace">开始分析</a>
+    </nav>
+    <div class="hero-plane">
+      <p class="brand">纪脉</p>
+      <h1>把会议链接，读成项目进度。</h1>
+      <p class="lede">粘贴纪要链接、上传文档或粘贴原文，自动识别项目进展；点击会议即可查看项目名称、汇报人、议题、进展与遗留点状态。</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#workspace">开始分析</a>
+        <button type="button" class="btn ghost" id="loadDemo">使用示例纪要</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="workspace" class="workspace">
+    <section class="compose">
+      <h2>输入纪要</h2>
+      <p class="section-lede">支持公开网页 / Markdown 链接、本地 <code>.md/.txt/.html</code> 文档，或直接粘贴原文。本地示例路径形如 <code>/samples/meetings/...</code>。</p>
+
+      <label class="field">
+        <span>项目名称（可选）</span>
+        <input id="projectName" type="text" placeholder="例如：智能客服平台" />
+      </label>
+
+      <label class="field">
+        <span>链接列表（每行一个）</span>
+        <textarea id="links" rows="6" placeholder="/samples/meetings/2026-01-08-kickoff.md&#10;https://example.com/meeting-notes"></textarea>
+      </label>
+
+      <label class="field">
+        <span>上传本地文档（可多选）</span>
+        <input id="files" type="file" accept=".md,.markdown,.txt,.html,.htm,text/plain,text/markdown,text/html" multiple />
+        <span class="file-hint" id="fileHint">未选择文件</span>
+      </label>
+
+      <label class="field">
+        <span>或粘贴会议纪要原文（可选）</span>
+        <textarea id="paste" rows="5" placeholder="把单次会议纪要粘贴在这里…"></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn primary" id="analyzeBtn">识别进度</button>
+        <button type="button" class="btn ghost" id="clearBtn">清空</button>
+      </div>
+      <p class="status" id="status" role="status"></p>
+    </section>
+
+    <section class="result" id="result" hidden>
+      <div class="result-bar">
+        <h2>识别结果</h2>
+        <div class="result-actions">
+          <button type="button" class="btn ghost" id="downloadReport">下载 HTML 报告</button>
+          <button type="button" class="btn ghost" id="openReport">新窗口打开报告</button>
+        </div>
+      </div>
+
+      <div class="project-banner" id="projectBanner"></div>
+      <div class="insight" id="insight"></div>
+
+      <div class="board">
+        <div class="meeting-list-wrap">
+          <h3>会议列表</h3>
+          <p class="section-lede compact">点击任一会议查看详情。</p>
+          <div class="meeting-list" id="meetingList" role="list"></div>
+        </div>
+        <aside class="detail-panel" id="detailPanel" aria-live="polite">
+          <p class="detail-empty">选择左侧会议，查看项目名称、汇报人、议题、进展与遗留点状态。</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>纪脉 · 会议纪要进度识别 · 本地运行</p>
+  </footer>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
