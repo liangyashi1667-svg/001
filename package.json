@@ -1,0 +1,21 @@
+{
+  "name": "liuji-meeting-followup",
+  "version": "1.0.0",
+  "description": "根据链接或文档识别会议纪要，跟进项目遗留点状态",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "analyze:demo": "node scripts/analyze-demo.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2",
+    "marked": "^15.0.7",
+    "multer": "^2.2.0"
+  }
+}
