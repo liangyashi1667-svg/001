@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>金秋博饼齐相聚 · 影像算法部</title>
+  <style>
+    @font-face {
+      font-family: "Poster Soft";
+      src: local("WenQuanYi Micro Hei"), local("文泉驿微米黑"), local("Droid Sans Fallback");
+      font-display: swap;
+    }
+
+    :root {
+      --ink: #f7efd8;
+      --ink-soft: rgba(247, 239, 216, 0.92);
+      --ink-mute: rgba(247, 239, 216, 0.68);
+      --gold: #f0c45a;
+      --moon: #ffe9a8;
+      --line: rgba(240, 196, 90, 0.42);
+      --font-display: "Poster Soft", "WenQuanYi Micro Hei", "Droid Sans Fallback", serif;
+      --font-body: "Poster Soft", "WenQuanYi Micro Hei", "Droid Sans Fallback", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(ellipse at 50% 20%, #1a3358 0%, #060d18 70%);
+      color: var(--ink);
+      font-family: var(--font-body);
+      padding: 24px 16px;
+    }
+
+    .stage { width: min(100%, 420px); }
+
+    .poster {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      overflow: hidden;
+      border-radius: 4px;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(240, 196, 90, 0.18);
+      isolation: isolate;
+    }
+
+    .poster__bg {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(7, 21, 40, 0.28) 0%,
+          rgba(7, 21, 40, 0.38) 36%,
+          rgba(7, 21, 40, 0.62) 64%,
+          rgba(7, 21, 40, 0.82) 100%
+        ),
+        url("./bg.png") center / cover no-repeat;
+      transform: scale(1.02);
+      animation: bgDrift 18s ease-in-out infinite alternate;
+    }
+
+    .poster__veil {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 72% 16%, rgba(255, 233, 168, 0.14), transparent 26%),
+        linear-gradient(180deg, transparent 24%, rgba(4, 12, 24, 0.55) 70%);
+      pointer-events: none;
+    }
+
+    .poster__frame {
+      position: absolute;
+      inset: 12px;
+      border: 1px solid rgba(240, 196, 90, 0.26);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .poster__frame::before,
+    .poster__frame::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-color: var(--gold);
+      border-style: solid;
+      opacity: 0.8;
+    }
+
+    .poster__frame::before {
+      top: -1px;
+      left: -1px;
+      border-width: 2px 0 0 2px;
+    }
+
+    .poster__frame::after {
+      right: -1px;
+      bottom: -1px;
+      border-width: 0 2px 2px 0;
+    }
+
+    /* 三区通知式布局：上标题 / 中导语 / 下流程 */
+    .content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 6.5% 8% 5%;
+    }
+
+    .zone {
+      position: relative;
+    }
+
+    .zone--title {
+      flex: 0 0 auto;
+      text-align: center;
+      padding: 0.15rem 0 0.55rem;
+    }
+
+    .zone--lead {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      padding: 1.35rem 0.2rem 1.45rem;
+      min-height: 9.5rem;
+    }
+
+    .zone--flow {
+      flex: 0 0 auto;
+      text-align: center;
+      padding: 0.55rem 0 0.2rem;
+    }
+
+    .zone-sep {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      margin: 0.35rem 0;
+      padding: 0.75rem 0;
+    }
+
+    .zone-sep::before,
+    .zone-sep::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--line), transparent);
+    }
+
+    .zone-sep span {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+    }
+
+    .eyebrow {
+      font-size: clamp(0.72rem, 2.3vw, 0.86rem);
+      letter-spacing: 0.42em;
+      color: var(--gold);
+      margin-bottom: 0.8rem;
+    }
+
+    .title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2.35rem, 9.2vw, 3.2rem);
+      line-height: 1.18;
+      letter-spacing: 0.14em;
+      color: var(--moon);
+      text-shadow:
+        0 2px 18px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(240, 196, 90, 0.18);
+      margin-bottom: 1rem;
+    }
+
+    .meta {
+      display: grid;
+      gap: 0.42rem;
+      justify-items: center;
+    }
+
+    .meta__row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.55rem;
+      font-size: clamp(0.78rem, 2.4vw, 0.9rem);
+      line-height: 1.5;
+      color: var(--ink);
+    }
+
+    .meta__label {
+      color: var(--gold);
+      letter-spacing: 0.12em;
+      flex-shrink: 0;
+    }
+
+    .zone__label {
+      font-size: clamp(0.8rem, 2.45vw, 0.94rem);
+      letter-spacing: 0.42em;
+      color: var(--gold);
+      margin-bottom: 0.95rem;
+    }
+
+    .lead {
+      font-size: clamp(0.78rem, 2.4vw, 0.9rem);
+      line-height: 2.05;
+      color: var(--ink-soft);
+      max-width: 21em;
+      margin: 0 auto;
+    }
+
+    .lead em {
+      font-style: normal;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+    }
+
+    .flow__list {
+      list-style: none;
+      display: grid;
+      gap: 0.62rem;
+      max-width: 18.5em;
+      margin: 0 auto;
+    }
+
+    .flow__list li {
+      display: grid;
+      grid-template-columns: 7.5em 1fr;
+      gap: 0.7rem;
+      align-items: baseline;
+      text-align: left;
+      font-size: clamp(0.78rem, 2.35vw, 0.9rem);
+      color: var(--ink-soft);
+      line-height: 1.45;
+    }
+
+    .flow__list time {
+      color: var(--moon);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+
+    .zone--foot {
+      flex: 0 0 auto;
+      margin-top: 1.15rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(240, 196, 90, 0.22);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .footer__org {
+      font-size: clamp(0.92rem, 2.8vw, 1.05rem);
+      letter-spacing: 0.22em;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .footer__tag {
+      font-size: clamp(0.68rem, 2vw, 0.76rem);
+      color: var(--ink-mute);
+      letter-spacing: 0.12em;
+    }
+
+    .petals {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 3;
+    }
+
+    .petal {
+      position: absolute;
+      width: 7px;
+      height: 10px;
+      background: radial-gradient(circle at 30% 30%, #ffe28a, #d9a43a 70%);
+      border-radius: 70% 10% 60% 20%;
+      opacity: 0.75;
+      animation: fall linear infinite;
+    }
+
+    .petal:nth-child(1) { left: 12%; top: -8%; animation-duration: 11s; }
+    .petal:nth-child(2) { left: 28%; top: -12%; width: 5px; height: 8px; animation-duration: 14s; animation-delay: -3s; }
+    .petal:nth-child(3) { left: 46%; top: -10%; animation-duration: 12s; animation-delay: -6s; }
+    .petal:nth-child(4) { left: 63%; top: -14%; width: 6px; height: 9px; animation-duration: 15s; animation-delay: -2s; }
+    .petal:nth-child(5) { left: 78%; top: -9%; animation-duration: 13s; animation-delay: -8s; }
+    .petal:nth-child(6) { left: 88%; top: -11%; width: 5px; height: 7px; animation-duration: 16s; animation-delay: -5s; }
+
+    .moon-glow {
+      position: absolute;
+      top: 8%;
+      right: 8%;
+      width: 28%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 233, 168, 0.2), transparent 68%);
+      animation: pulseGlow 5.5s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actions button {
+      appearance: none;
+      border: 1px solid rgba(240, 196, 90, 0.45);
+      background: rgba(10, 24, 44, 0.75);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .actions button:hover {
+      background: rgba(28, 52, 86, 0.9);
+      border-color: var(--gold);
+    }
+
+    .hint {
+      margin-top: 12px;
+      text-align: center;
+      color: rgba(247, 239, 216, 0.55);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+    }
+
+    @keyframes fall {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.8; }
+      100% { transform: translate3d(-28px, 112vh, 0) rotate(260deg); opacity: 0; }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50% { opacity: 0.95; transform: scale(1.08); }
+    }
+
+    @keyframes bgDrift {
+      from { transform: scale(1.02) translateY(0); }
+      to { transform: scale(1.05) translateY(-1.2%); }
+    }
+
+    @media print {
+      body { background: #000; padding: 0; }
+      .actions, .hint { display: none !important; }
+      .poster { width: 100vw; max-width: none; border-radius: 0; box-shadow: none; }
+      .petal, .moon-glow, .poster__bg { animation: none !important; }
+    }
+
+    body.export-mode,
+    body.shot-mode {
+      background: #000;
+      padding: 0;
+      min-height: auto;
+      place-items: start;
+    }
+
+    body.export-mode .stage,
+    body.shot-mode .stage { width: 1080px; max-width: none; }
+    body.export-mode .actions,
+    body.export-mode .hint,
+    body.shot-mode .actions,
+    body.shot-mode .hint { display: none; }
+    body.export-mode .poster,
+    body.shot-mode .poster {
+      width: 1080px;
+      height: 1620px;
+      aspect-ratio: auto;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    body.export-mode .petal,
+    body.export-mode .moon-glow,
+    body.export-mode .poster__bg,
+    body.shot-mode .petal,
+    body.shot-mode .moon-glow,
+    body.shot-mode .poster__bg { animation: none !important; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <article class="poster" id="poster" aria-label="金秋博饼齐相聚活动海报">
+      <div class="poster__bg" aria-hidden="true"></div>
+      <div class="poster__veil" aria-hidden="true"></div>
+      <div class="moon-glow" aria-hidden="true"></div>
+      <div class="poster__frame" aria-hidden="true"></div>
+      <div class="petals" aria-hidden="true">
+        <span class="petal"></span>
+        <span class="petal"></span>
+        <span class="petal"></span>
+        <span class="petal"></span>
+        <span class="petal"></span>
+        <span class="petal"></span>
+      </div>
+
+      <div class="content">
+        <!-- ① 标题区 -->
+        <header class="zone zone--title">
+          <p class="eyebrow">中秋将至 · 邀您一聚</p>
+          <h1 class="title">金秋博饼<br />齐相聚</h1>
+          <div class="meta">
+            <div class="meta__row">
+              <span class="meta__label">时间</span>
+              <span>9月17日 18:00 – 20:30</span>
+            </div>
+            <div class="meta__row">
+              <span class="meta__label">地点</span>
+              <span>春满园 · 龙凤二厅（喜宴店）</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="zone-sep" aria-hidden="true"><span>◇</span></div>
+
+        <!-- ② 导语区 -->
+        <section class="zone zone--lead">
+          <h2 class="zone__label">活动寄语</h2>
+          <p class="lead">
+            金秋送爽，丹桂飘香，又是一年中秋近。<br />
+            放下忙碌，赴一场久违的聚会，<br />
+            围坐一桌，让情谊在团圆饭里升温。<br />
+            博饼助兴，讨个好彩头。<br />
+            <em>不见不散。</em>
+          </p>
+        </section>
+
+        <div class="zone-sep" aria-hidden="true"><span>◇</span></div>
+
+        <!-- ③ 流程区 -->
+        <section class="zone zone--flow">
+          <h2 class="zone__label">晚宴流程</h2>
+          <ol class="flow__list">
+            <li><time>18:00 – 18:30</time><span>同道者授证</span></li>
+            <li><time>18:30 – 19:30</time><span>自由晚宴</span></li>
+            <li><time>19:30 – 20:00</time><span>欢快博饼</span></li>
+          </ol>
+        </section>
+
+        <footer class="zone zone--foot">
+          <div class="footer__org">影像算法部</div>
+          <div class="footer__tag">内部活动预热</div>
+        </footer>
+      </div>
+    </article>
+
+    <div class="actions">
+      <button type="button" id="btnExport">导出海报 PNG</button>
+      <button type="button" id="btnPrint">打印 / 另存 PDF</button>
+    </div>
+    <p class="hint">建议导出 PNG 用于群聊预热；也可全屏后截图分享</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    if (new URLSearchParams(location.search).has("shot")) {
+      document.body.classList.add("shot-mode");
+    }
+
+    document.getElementById("btnPrint").addEventListener("click", () => window.print());
+
+    document.getElementById("btnExport").addEventListener("click", async () => {
+      const btn = document.getElementById("btnExport");
+      const poster = document.getElementById("poster");
+      btn.disabled = true;
+      btn.textContent = "导出中…";
+      document.body.classList.add("export-mode");
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      try {
+        const canvas = await html2canvas(poster, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#071528",
+          width: 1080,
+          height: 1620,
+          windowWidth: 1080,
+          windowHeight: 1620,
+        });
+        const link = document.createElement("a");
+        link.download = "金秋博饼齐相聚-影像算法部.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } catch (err) {
+        console.error(err);
+        alert("导出失败，请改用浏览器全屏截图。");
+      } finally {
+        document.body.classList.remove("export-mode");
+        btn.disabled = false;
+        btn.textContent = "导出海报 PNG";
+      }
+    });
+  </script>
+</body>
+</html>
